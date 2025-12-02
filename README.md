@@ -7,18 +7,21 @@ Sistema di monitoraggio rete completo basato su Python, SQLite e Nmap per la dis
 - 🔍 **Network Discovery**: Scansione automatica della rete con Nmap
 - 🖥️ **Device Recognition**: Identificazione automatica dispositivi tramite OUI, porte e servizi
 - 💾 **Database SQLite**: Storage persistente di tutti i dati
-- ⚡ **Multitasking**: Esecuzione parallela delle scansioni con worker pool
+- ⚡ **Multitasking**: Esecuzione parallela delle scansioni con ThreadPoolExecutor (compatibile Windows)
 - 📅 **Scheduler**: Scansioni programmate e automatiche
 - 🌐 **API REST**: Interfaccia Flask per controllo e consultazione
 - 📊 **Export**: Esportazione dati in JSON, CSV, HTML, XML
 - 🚨 **Alerting**: Notifiche via webhook, email e Telegram
 - ⚙️ **Configurabile**: Configurazione completa tramite YAML
+- 🪟 **Cross-Platform**: Funziona su Windows, Linux e macOS
 
 ## Requisiti
 
 - Python 3.11+
 - Nmap (installato nel sistema)
 - Linux, macOS o Windows
+
+> **📖 Utenti Windows**: Consultare [WINDOWS.md](WINDOWS.md) per la guida completa con istruzioni dettagliate, troubleshooting e configurazione come servizio Windows
 
 ### Installazione Nmap
 
@@ -39,7 +42,11 @@ brew install nmap
 ```
 
 **Windows:**
-Scaricare da https://nmap.org/download.html
+Scaricare e installare da https://nmap.org/download.html
+
+**IMPORTANTE per Windows:**
+- Assicurarsi che `nmap.exe` sia nel PATH di sistema
+- Oppure aggiungere manualmente la directory di installazione Nmap (es. `C:\Program Files (x86)\Nmap`) al PATH
 
 ## Installazione
 
@@ -50,11 +57,17 @@ cd pulse
 ```
 
 2. Creare un ambiente virtuale:
+
+**Linux/macOS:**
 ```bash
 python3 -m venv venv
-source venv/bin/activate  # Linux/macOS
-# oppure
-venv\Scripts\activate  # Windows
+source venv/bin/activate
+```
+
+**Windows:**
+```cmd
+python -m venv venv
+venv\Scripts\activate
 ```
 
 3. Installare le dipendenze:
@@ -231,7 +244,7 @@ curl http://localhost:5000/api/health
 pulse/
 ├── scanner/          # Scanner engine (Nmap wrapper)
 │   ├── engine.py     # Nmap execution
-│   └── worker.py     # Worker pool & orchestrator
+│   └── worker.py     # ThreadPoolExecutor worker pool (Windows-compatible)
 ├── parser/           # Nmap output parser
 │   └── nmap_parser.py
 ├── storage/          # Database layer
@@ -326,28 +339,54 @@ Il sistema verifica e aggiorna automaticamente il database OUI secondo l'interva
 ## Troubleshooting
 
 ### Nmap non trovato
-Assicurarsi che Nmap sia installato e nel PATH:
+
+**Linux/macOS:**
 ```bash
-which nmap  # Linux/macOS
-where nmap  # Windows
+which nmap
 ```
 
+**Windows:**
+```cmd
+where nmap
+```
+
+Se non trovato su Windows:
+1. Verificare che Nmap sia installato
+2. Aggiungere al PATH: `C:\Program Files (x86)\Nmap`
+3. Riavviare il prompt dei comandi
+
 ### Permessi insufficienti
-Alcune scansioni Nmap (es. OS detection) richiedono privilegi root:
+
+Alcune scansioni Nmap (es. OS detection) richiedono privilegi elevati:
+
+**Linux/macOS:**
 ```bash
 sudo python main.py
 ```
 
+**Windows:**
+- Eseguire il prompt dei comandi come Amministratore
+- Oppure eseguire: `python main.py` dal prompt amministratore
+
 ### Errori di database
-Verificare che la directory `instance/` abbia permessi di scrittura:
+
+**Linux/macOS:**
 ```bash
 chmod 755 instance/
 ```
 
-### Worker pool non avvia
-Verificare che `max_workers` in configurazione non superi il numero di core:
-```bash
-python -c "import multiprocessing; print(multiprocessing.cpu_count())"
+**Windows:**
+- Verificare che la directory sia scrivibile
+- Controllare permessi cartella `instance/`
+
+### Worker pool issues su Windows
+
+Il sistema usa **ThreadPoolExecutor** (compatibile Windows) invece di ProcessPoolExecutor.
+Non ci sono problemi di pickling o multiprocessing su Windows.
+
+Verificare il numero di worker configurati:
+```python
+python -c "import os; print('CPU count:', os.cpu_count())"
 ```
 
 ## Sicurezza
@@ -361,9 +400,10 @@ python -c "import multiprocessing; print(multiprocessing.cpu_count())"
 ## Limitazioni
 
 - Le scansioni richiedono tempo (da secondi a ore per reti grandi)
-- OS detection richiede privilegi root
+- OS detection richiede privilegi elevati (root su Linux/macOS, amministratore su Windows)
 - Alcuni firewall possono bloccare le scansioni Nmap
 - SQLite ha limitazioni per concorrenza molto elevata
+- Il worker pool usa thread (ThreadPoolExecutor) invece di processi per compatibilità Windows
 
 ## Contribuire
 

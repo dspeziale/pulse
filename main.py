@@ -81,6 +81,7 @@ def initialize_system(config):
 
     logger.info("=" * 60)
     logger.info("Pulse Network Monitor - Starting")
+    logger.info(f"Platform: {sys.platform}")
     logger.info("=" * 60)
 
     # Initialize database

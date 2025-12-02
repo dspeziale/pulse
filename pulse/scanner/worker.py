@@ -1,11 +1,11 @@
 """
 Worker pool for parallel scan execution
+Windows-compatible version using ThreadPoolExecutor
 """
 
 import logging
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Callable, Optional
-import multiprocessing
 from datetime import datetime
 
 from pulse.scanner.engine import create_scanner, ScanType
@@ -16,73 +16,8 @@ from pulse.utils.config import get_config
 logger = logging.getLogger(__name__)
 
 
-def scan_worker(task_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Worker function for executing a scan task
-    This function runs in a separate process
-
-    Args:
-        task_data: Task data dictionary
-
-    Returns:
-        Result dictionary
-    """
-    task_id = task_data.get('id')
-    target = task_data.get('target')
-    task_type = task_data.get('task_type')
-    scan_options = task_data.get('scan_options')
-
-    logger.info(f"Worker starting task {task_id}: {task_type} scan of {target}")
-
-    try:
-        # Create scanner instance
-        config = get_config()
-        scanner = create_scanner(config)
-
-        # Execute scan
-        timeout = config.get('scanner.workers.timeout', 600)
-
-        if task_type == 'discovery':
-            result = scanner.discovery_scan(target, timeout=timeout)
-        elif task_type == 'quick':
-            result = scanner.quick_scan(target, timeout=timeout)
-        elif task_type == 'deep':
-            result = scanner.deep_scan(target, timeout=timeout)
-        elif task_type == 'full':
-            result = scanner.full_scan(target, timeout=timeout)
-        elif task_type == 'custom':
-            result = scanner.scan(target, ScanType.CUSTOM, options=scan_options, timeout=timeout)
-        else:
-            return {
-                'task_id': task_id,
-                'success': False,
-                'error': f'Unknown task type: {task_type}'
-            }
-
-        # Parse results if successful
-        if result.get('success') and result.get('xml_output'):
-            parser = create_parser()
-            parsed_data = parser.parse_xml(result['xml_output'])
-            result['parsed_data'] = parsed_data
-
-            # Extract devices
-            devices = parser.extract_devices(parsed_data)
-            result['devices'] = devices
-
-        result['task_id'] = task_id
-        return result
-
-    except Exception as e:
-        logger.error(f"Worker error for task {task_id}: {e}", exc_info=True)
-        return {
-            'task_id': task_id,
-            'success': False,
-            'error': str(e)
-        }
-
-
 class ScanWorkerPool:
-    """Worker pool for managing parallel scan execution"""
+    """Worker pool for managing parallel scan execution (Windows-compatible)"""
 
     def __init__(self, config=None):
         """Initialize worker pool"""
@@ -91,13 +26,78 @@ class ScanWorkerPool:
         self.executor = None
         self.active_tasks = {}
 
-        logger.info(f"Worker pool initialized with {self.max_workers} workers")
+        logger.info(f"Worker pool initialized with {self.max_workers} workers (ThreadPoolExecutor)")
 
     def start(self):
         """Start the worker pool"""
         if self.executor is None:
-            self.executor = ProcessPoolExecutor(max_workers=self.max_workers)
-            logger.info("Worker pool started")
+            # Use ThreadPoolExecutor for Windows compatibility
+            # Threads work well for I/O bound operations like running nmap subprocesses
+            self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
+            logger.info("Worker pool started (ThreadPoolExecutor)")
+
+    def _scan_worker(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Worker method for executing a scan task
+        Runs in a separate thread (Windows-compatible)
+
+        Args:
+            task_data: Task data dictionary
+
+        Returns:
+            Result dictionary
+        """
+        task_id = task_data.get('id')
+        target = task_data.get('target')
+        task_type = task_data.get('task_type')
+        scan_options = task_data.get('scan_options')
+
+        logger.info(f"Worker starting task {task_id}: {task_type} scan of {target}")
+
+        try:
+            # Create scanner instance (thread-safe)
+            scanner = create_scanner(self.config)
+
+            # Execute scan
+            timeout = self.config.get('scanner.workers.timeout', 600)
+
+            if task_type == 'discovery':
+                result = scanner.discovery_scan(target, timeout=timeout)
+            elif task_type == 'quick':
+                result = scanner.quick_scan(target, timeout=timeout)
+            elif task_type == 'deep':
+                result = scanner.deep_scan(target, timeout=timeout)
+            elif task_type == 'full':
+                result = scanner.full_scan(target, timeout=timeout)
+            elif task_type == 'custom':
+                result = scanner.scan(target, ScanType.CUSTOM, options=scan_options, timeout=timeout)
+            else:
+                return {
+                    'task_id': task_id,
+                    'success': False,
+                    'error': f'Unknown task type: {task_type}'
+                }
+
+            # Parse results if successful
+            if result.get('success') and result.get('xml_output'):
+                parser = create_parser()
+                parsed_data = parser.parse_xml(result['xml_output'])
+                result['parsed_data'] = parsed_data
+
+                # Extract devices
+                devices = parser.extract_devices(parsed_data)
+                result['devices'] = devices
+
+            result['task_id'] = task_id
+            return result
+
+        except Exception as e:
+            logger.error(f"Worker error for task {task_id}: {e}", exc_info=True)
+            return {
+                'task_id': task_id,
+                'success': False,
+                'error': str(e)
+            }
 
     def stop(self, wait: bool = True):
         """Stop the worker pool"""
@@ -121,7 +121,8 @@ class ScanWorkerPool:
             self.start()
 
         task_id = task_data.get('id')
-        future = self.executor.submit(scan_worker, task_data)
+        # Submit the worker method (thread-safe, Windows-compatible)
+        future = self.executor.submit(self._scan_worker, task_data)
 
         if callback:
             future.add_done_callback(lambda f: callback(f.result()))
