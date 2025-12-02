@@ -404,6 +404,7 @@ python -c "import os; print('CPU count:', os.cpu_count())"
 - Alcuni firewall possono bloccare le scansioni Nmap
 - SQLite ha limitazioni per concorrenza molto elevata
 - Il worker pool usa thread (ThreadPoolExecutor) invece di processi per compatibilità Windows
+- Lo scheduler usa MemoryJobStore (i job schedulati vengono ricreati ad ogni avvio, ma non si perdono dati)
 
 ## Contribuire
 

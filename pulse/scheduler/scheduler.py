@@ -1,12 +1,13 @@
 """
 Scheduler for automated scan tasks using APScheduler
+Windows-compatible version using MemoryJobStore
 """
 
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.cron import CronTrigger
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class ScanScheduler:
-    """Scheduler for automated network scans"""
+    """Scheduler for automated network scans (Windows-compatible)"""
 
     def __init__(self, config=None, db=None):
         """Initialize scheduler"""
@@ -28,10 +29,11 @@ class ScanScheduler:
         self.orchestrator = get_orchestrator(config, db)
 
         # Configure job stores
-        jobstores = {}
-        if self.config.get('scheduler.jobstore') == 'sqlite':
-            jobstore_path = self.config.get('scheduler.jobstore_path', 'instance/jobs.sqlite')
-            jobstores['default'] = SQLAlchemyJobStore(url=f'sqlite:///{jobstore_path}')
+        # Use MemoryJobStore for Windows compatibility (no pickling issues)
+        # Jobs are recreated on each startup, which is acceptable for this use case
+        jobstores = {
+            'default': MemoryJobStore()
+        }
 
         # Configure executors
         executors = {
@@ -53,6 +55,7 @@ class ScanScheduler:
         )
 
         self.is_running = False
+        logger.info("Scheduler initialized with MemoryJobStore (Windows-compatible)")
 
     def start(self):
         """Start the scheduler"""

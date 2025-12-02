@@ -181,11 +181,9 @@ logging:
 
 # Scheduler settings
 scheduler:
-  # Job store type (memory or sqlite)
-  jobstore: "sqlite"
-
-  # SQLite job store path
-  jobstore_path: "instance/jobs.sqlite"
+  # Job store: Uses MemoryJobStore (Windows-compatible, no pickling issues)
+  # Jobs are recreated on startup, which is acceptable for this use case
+  # Note: SQLite jobstore removed due to Windows pickling issues
 
   # Coalesce (combine missed runs)
   coalesce: true

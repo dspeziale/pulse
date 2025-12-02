@@ -245,13 +245,22 @@ scanner:
    - Nessun problema di pickling
    - Stessa performance per operazioni I/O bound come Nmap
 
-2. **Paths**: Usa backslash `\` invece di `/`
+2. **Scheduler**: Usa MemoryJobStore invece di SQLite JobStore
+   - Evita problemi di serializzazione su Windows
+   - I job schedulati vengono ricreati ad ogni avvio
+   - Nessuna perdita di dati (i task sono nel database principale)
+
+3. **Paths**: Usa backslash `\` invece di `/`
    - Pulse gestisce automaticamente le differenze
 
-3. **Privilegi**: "Amministratore" invece di "root"
+4. **Privilegi**: "Amministratore" invece di "root"
    - Alcune scansioni richiedono privilegi elevati
 
-4. **Servizi**: Task Scheduler o NSSM invece di systemd
+5. **Servizi**: Task Scheduler o NSSM invece di systemd
+
+6. **Rilevamento Nmap**: Cerca automaticamente in percorsi comuni Windows
+   - `C:\Program Files (x86)\Nmap\nmap.exe`
+   - `C:\Program Files\Nmap\nmap.exe`
 
 ## Test dell'Installazione
 
