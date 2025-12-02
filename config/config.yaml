@@ -1,0 +1,194 @@
+# Pulse Network Monitor Configuration
+
+# Database settings
+database:
+  path: "instance/pulse.sqlite"
+
+# Scanner settings
+scanner:
+  # Default network range to scan
+  default_network: "192.168.1.0/24"
+
+  # Nmap options
+  nmap:
+    # Discovery scan options (-sn = ping scan, no port scan)
+    discovery_options: "-sn -T4"
+
+    # Deep scan options (OS detection, version detection, scripts)
+    deep_scan_options: "-sV -O -A --script=default,discovery -T4"
+
+    # Quick port scan
+    quick_scan_options: "-F -sV -T4"
+
+    # Full port scan
+    full_scan_options: "-p- -sV -T4"
+
+  # Scan intervals (in seconds)
+  intervals:
+    discovery: 300  # 5 minutes
+    quick_scan: 900  # 15 minutes
+    deep_scan: 3600  # 1 hour
+
+  # Worker pool settings
+  workers:
+    max_workers: 4
+    timeout: 600  # 10 minutes per scan
+
+# Device recognition settings
+recognition:
+  # Enable OUI-based vendor detection
+  oui_detection: true
+
+  # Enable OS fingerprinting
+  os_fingerprinting: true
+
+  # Device type classification rules
+  classification:
+    router:
+      ports: [22, 23, 80, 443, 8080]
+      keywords: ["router", "gateway", "mikrotik", "ubiquiti"]
+
+    switch:
+      ports: [22, 23, 80, 443]
+      keywords: ["switch", "cisco", "hp", "dell"]
+
+    server:
+      ports: [22, 80, 443, 3306, 5432, 6379]
+      keywords: ["server", "linux", "ubuntu", "debian", "centos"]
+
+    printer:
+      ports: [9100, 515, 631]
+      keywords: ["printer", "canon", "hp", "epson"]
+
+    camera:
+      ports: [80, 554, 8080]
+      keywords: ["camera", "webcam", "rtsp", "onvif"]
+
+    nas:
+      ports: [139, 445, 2049, 5000, 5001]
+      keywords: ["nas", "storage", "synology", "qnap"]
+
+    iot:
+      keywords: ["iot", "smart", "alexa", "google home"]
+
+# OUI database settings
+oui:
+  # IEEE OUI database URL
+  update_url: "https://standards-oui.ieee.org/oui/oui.txt"
+
+  # Update interval (in seconds)
+  update_interval: 604800  # 7 days
+
+  # Cache file
+  cache_file: "data/oui.txt"
+
+# Alert settings
+alerts:
+  enabled: true
+
+  # Alert channels
+  channels:
+    # Webhook
+    webhook:
+      enabled: false
+      url: ""
+
+    # Email
+    email:
+      enabled: false
+      smtp_server: ""
+      smtp_port: 587
+      smtp_username: ""
+      smtp_password: ""
+      from_address: ""
+      to_addresses: []
+
+    # Telegram
+    telegram:
+      enabled: false
+      bot_token: ""
+      chat_id: ""
+
+  # Alert rules
+  rules:
+    new_device:
+      enabled: true
+      severity: "info"
+
+    device_offline:
+      enabled: true
+      severity: "warning"
+      threshold: 600  # seconds
+
+    device_online:
+      enabled: true
+      severity: "info"
+
+    new_port:
+      enabled: true
+      severity: "info"
+
+    port_closed:
+      enabled: true
+      severity: "warning"
+
+    suspicious_port:
+      enabled: true
+      severity: "critical"
+      ports: [23, 445, 3389]  # Telnet, SMB, RDP
+
+# API settings
+api:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+
+  # CORS settings
+  cors:
+    enabled: true
+    origins: ["*"]
+
+  # Authentication
+  auth:
+    enabled: false
+    username: "admin"
+    password: "admin"
+
+  # Rate limiting
+  rate_limit:
+    enabled: false
+    per_minute: 60
+
+# Export settings
+export:
+  # Export directory
+  output_dir: "exports"
+
+  # Supported formats
+  formats:
+    - json
+    - csv
+    - html
+    - xml
+
+# Logging settings
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/pulse.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+# Scheduler settings
+scheduler:
+  # Job store type (memory or sqlite)
+  jobstore: "sqlite"
+
+  # SQLite job store path
+  jobstore_path: "instance/jobs.sqlite"
+
+  # Coalesce (combine missed runs)
+  coalesce: true
+
+  # Max instances of same job
+  max_instances: 1

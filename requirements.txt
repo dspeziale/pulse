@@ -1,0 +1,36 @@
+# Pulse Network Monitor - Requirements
+# Python 3.11+
+
+# Core dependencies
+Flask==3.0.0
+flask-cors==4.0.0
+requests==2.31.0
+pyyaml==6.0.1
+
+# Scheduling
+APScheduler==3.10.4
+
+# Database (apsw is optional for better SQLite performance)
+# apsw==3.45.0.0
+
+# Email support
+# Uncomment if using email alerts
+# secure-smtplib==0.1.1
+
+# Development and testing
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# Utilities
+python-dateutil==2.8.2
+
+# Optional: Better output formatting
+colorama==0.4.6
+tabulate==0.9.0
+
+# Note: Nmap must be installed separately on the system
+# Ubuntu/Debian: sudo apt-get install nmap
+# CentOS/RHEL: sudo yum install nmap
+# macOS: brew install nmap
+# Windows: Download from https://nmap.org/download.html
