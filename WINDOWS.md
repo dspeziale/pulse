@@ -27,6 +27,8 @@ python --version
 2. Scaricare il file "Latest stable release self-installer"
 3. Eseguire l'installer come Amministratore
 4. Durante l'installazione, selezionare tutte le componenti
+
+**Opzione A: Aggiungere Nmap al PATH (Raccomandato)**
 5. Aggiungere Nmap al PATH:
    - Aprire "Modifica variabili d'ambiente di sistema"
    - Cliccare su "Variabili d'ambiente"
@@ -38,6 +40,14 @@ python --version
 ```cmd
 nmap --version
 ```
+
+**Opzione B: Rilevamento Automatico**
+
+Se non aggiungi Nmap al PATH, Pulse cercherà automaticamente nei percorsi comuni:
+- `C:\Program Files (x86)\Nmap\nmap.exe`
+- `C:\Program Files\Nmap\nmap.exe`
+
+Pulse troverà Nmap anche senza configurazione PATH! ✅
 
 ### 3. Installare Pulse
 
@@ -126,12 +136,21 @@ python main.py scan deep 192.168.1.100
 - Oppure aggiungere manualmente Python al PATH:
   - Percorso tipico: `C:\Users\YourName\AppData\Local\Programs\Python\Python311`
 
-### 2. "nmap non è riconosciuto come comando"
+### 2. "Nmap not found in system PATH"
 
-**Soluzione:**
-- Verificare che Nmap sia installato
-- Aggiungere al PATH: `C:\Program Files (x86)\Nmap`
-- Riavviare il prompt dei comandi
+**Nota**: Pulse ora cerca automaticamente Nmap nei percorsi comuni di Windows!
+
+**Soluzione Automatica:**
+Pulse cerca automaticamente in:
+- PATH di sistema
+- `C:\Program Files (x86)\Nmap\nmap.exe`
+- `C:\Program Files\Nmap\nmap.exe`
+
+**Se ancora non funziona:**
+1. Verificare che Nmap sia installato: controllare in `C:\Program Files (x86)\Nmap`
+2. Se installato in percorso diverso, aggiungerlo al PATH
+3. Oppure reinstallare Nmap nel percorso predefinito
+4. Riavviare il prompt dei comandi dopo modifiche al PATH
 
 ### 3. Errori di permessi
 

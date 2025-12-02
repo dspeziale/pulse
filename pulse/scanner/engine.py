@@ -5,6 +5,7 @@ Scanner engine for network discovery and scanning using Nmap
 import subprocess
 import tempfile
 import os
+import shutil
 import logging
 from typing import Optional, Dict, List, Any, Tuple
 from datetime import datetime
@@ -36,20 +37,37 @@ class NmapScanner:
         logger.info(f"Nmap found at: {self.nmap_path}")
 
     def _find_nmap(self) -> Optional[str]:
-        """Find nmap executable in system"""
+        """
+        Find nmap executable in system (cross-platform)
+        Uses shutil.which() which works on Windows, Linux, and macOS
+        """
         try:
-            result = subprocess.run(
-                ['which', 'nmap'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode == 0:
-                return result.stdout.strip()
+            # shutil.which() searches PATH and returns full path to executable
+            # Works on Windows (nmap.exe), Linux, and macOS (nmap)
+            nmap_path = shutil.which('nmap')
+
+            if nmap_path:
+                logger.debug(f"Found nmap using shutil.which: {nmap_path}")
+                return nmap_path
+
+            # If not found in PATH, try common Windows installation paths
+            if os.name == 'nt':  # Windows
+                common_paths = [
+                    r'C:\Program Files (x86)\Nmap\nmap.exe',
+                    r'C:\Program Files\Nmap\nmap.exe',
+                ]
+
+                for path in common_paths:
+                    if os.path.isfile(path):
+                        logger.debug(f"Found nmap at common Windows path: {path}")
+                        return path
+
+            logger.warning("Nmap not found in PATH or common installation directories")
+            return None
+
         except Exception as e:
             logger.error(f"Error finding nmap: {e}")
-
-        return None
+            return None
 
     def get_nmap_version(self) -> str:
         """Get Nmap version"""
