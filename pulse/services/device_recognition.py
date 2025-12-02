@@ -285,16 +285,16 @@ class DeviceRecognition:
         }
 
         for device in devices:
-            # Count by type
-            device_type = device.get('device_type', 'unknown')
+            # Count by type (handle None values)
+            device_type = device.get('device_type') or 'unknown'
             stats['by_type'][device_type] = stats['by_type'].get(device_type, 0) + 1
 
-            # Count by vendor
-            vendor = device.get('vendor', 'Unknown')
+            # Count by vendor (handle None values)
+            vendor = device.get('vendor') or 'Unknown'
             stats['by_vendor'][vendor] = stats['by_vendor'].get(vendor, 0) + 1
 
-            # Count by OS
-            os_family = device.get('os_family', 'Unknown')
+            # Count by OS (handle None values)
+            os_family = device.get('os_family') or 'Unknown'
             stats['by_os'][os_family] = stats['by_os'].get(os_family, 0) + 1
 
             # Count hostnames
