@@ -342,53 +342,83 @@ class ScanOrchestrator:
         """Process scan result and update database"""
         task_id = result.get('task_id')
 
-        # Save scan result
-        result_id = self.db.save_scan_result({
-            'task_id': task_id,
-            'scan_type': result.get('scan_type'),
-            'target': result.get('target'),
-            'start_time': result.get('start_time'),
-            'end_time': result.get('end_time'),
-            'duration': result.get('duration'),
-            'hosts_up': result.get('parsed_data', {}).get('hosts_up', 0),
-            'hosts_down': result.get('parsed_data', {}).get('hosts_down', 0),
-            'hosts_total': result.get('parsed_data', {}).get('hosts_total', 0),
-            'nmap_command': result.get('command'),
-            'nmap_version': result.get('nmap_version'),
-            'raw_output': result.get('stdout'),
-            'xml_output': result.get('xml_output'),
-            'summary': f"Scanned {result.get('target')} - {result.get('parsed_data', {}).get('hosts_up', 0)} hosts up"
-        })
+        try:
+            logger.info(f"📊 Processing scan result for task {task_id}")
 
-        # Process discovered devices
-        devices = result.get('devices', [])
-        for device_data in devices:
-            device_id = self.db.add_device(device_data)
+            # Check if scan was successful
+            if not result.get('success'):
+                logger.warning(f"⚠️  Task {task_id} failed: {result.get('error')}")
+                return
 
-            # Add ports
-            if device_data.get('metadata', {}).get('ports'):
-                for port in device_data['metadata']['ports']:
-                    self.db.add_port({
-                        'device_id': device_id,
-                        'port_number': int(port.get('port', 0)),
-                        'protocol': port.get('protocol', 'tcp'),
-                        'state': port.get('state', 'unknown'),
-                        'service_name': port.get('service', {}).get('name'),
-                        'service_product': port.get('service', {}).get('product'),
-                        'service_version': port.get('service', {}).get('version'),
-                        'service_extrainfo': port.get('service', {}).get('extrainfo')
-                    })
-
-            # Create event for new device
-            self.db.create_event({
-                'event_type': 'device_discovered',
-                'severity': 'info',
-                'device_id': device_id,
-                'title': f"Device discovered: {device_data.get('ip_address')}",
-                'description': f"New device found - {device_data.get('hostname') or device_data.get('ip_address')}"
+            # Save scan result
+            logger.debug(f"💾 Saving scan result for task {task_id}")
+            result_id = self.db.save_scan_result({
+                'task_id': task_id,
+                'scan_type': result.get('scan_type'),
+                'target': result.get('target'),
+                'start_time': result.get('start_time'),
+                'end_time': result.get('end_time'),
+                'duration': result.get('duration'),
+                'hosts_up': result.get('parsed_data', {}).get('hosts_up', 0),
+                'hosts_down': result.get('parsed_data', {}).get('hosts_down', 0),
+                'hosts_total': result.get('parsed_data', {}).get('hosts_total', 0),
+                'nmap_command': result.get('command'),
+                'nmap_version': result.get('nmap_version'),
+                'raw_output': result.get('stdout'),
+                'xml_output': result.get('xml_output'),
+                'summary': f"Scanned {result.get('target')} - {result.get('parsed_data', {}).get('hosts_up', 0)} hosts up"
             })
+            logger.info(f"✅ Scan result saved with ID: {result_id}")
 
-        logger.info(f"Processed {len(devices)} devices from scan result")
+            # Process discovered devices
+            devices = result.get('devices', [])
+            logger.info(f"🔍 Processing {len(devices)} discovered devices")
+
+            for idx, device_data in enumerate(devices, 1):
+                try:
+                    ip_address = device_data.get('ip_address')
+                    logger.debug(f"📡 Processing device {idx}/{len(devices)}: {ip_address}")
+
+                    device_id = self.db.add_device(device_data)
+                    logger.debug(f"✅ Device {ip_address} saved with ID: {device_id}")
+
+                    # Add ports
+                    ports = device_data.get('metadata', {}).get('ports', [])
+                    if ports:
+                        logger.debug(f"🔌 Adding {len(ports)} ports for device {ip_address}")
+                        for port in ports:
+                            try:
+                                self.db.add_port({
+                                    'device_id': device_id,
+                                    'port_number': int(port.get('port', 0)),
+                                    'protocol': port.get('protocol', 'tcp'),
+                                    'state': port.get('state', 'unknown'),
+                                    'service_name': port.get('service', {}).get('name'),
+                                    'service_product': port.get('service', {}).get('product'),
+                                    'service_version': port.get('service', {}).get('version'),
+                                    'service_extrainfo': port.get('service', {}).get('extrainfo')
+                                })
+                            except Exception as port_error:
+                                logger.error(f"❌ Error adding port {port.get('port')} for device {ip_address}: {port_error}")
+
+                    # Create event for new device
+                    self.db.create_event({
+                        'event_type': 'device_discovered',
+                        'severity': 'info',
+                        'device_id': device_id,
+                        'title': f"Device discovered: {ip_address}",
+                        'description': f"New device found - {device_data.get('hostname') or ip_address}"
+                    })
+                    logger.debug(f"📢 Event created for device {ip_address}")
+
+                except Exception as device_error:
+                    logger.error(f"❌ Error processing device {device_data.get('ip_address')}: {device_error}", exc_info=True)
+                    continue
+
+            logger.info(f"✅ Successfully processed {len(devices)} devices from scan result")
+
+        except Exception as e:
+            logger.error(f"❌ Error processing scan result for task {task_id}: {e}", exc_info=True)
 
 
 # Global orchestrator instance
